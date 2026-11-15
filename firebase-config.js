@@ -2,13 +2,15 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getFirestore } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
+// For Firebase JS SDK v7.20.0 and later, measurementId is optional
 const firebaseConfig = {
-  apiKey: "YAIzaSyCPtXm3WP2c3HK6yrHS1PqcsZDszVbIaAI",
+  apiKey: "AIzaSyCPtXm3WP2c3HK6yrHS1PqcsZDszVbIaAI",
   authDomain: "campus-parking-2c527.firebaseapp.com",
   projectId: "campus-parking-2c527",
   storageBucket: "campus-parking-2c527.firebasestorage.app",
   messagingSenderId: "967712211990",
   appId: "1:967712211990:web:60d177eab80636d88fa137",
+  measurementId: "G-QMX0PL5ZF5"
 };
 
 export const app = initializeApp(firebaseConfig);

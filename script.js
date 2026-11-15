@@ -17,7 +17,7 @@ import {
 // Set the real capacity per zone in Firestore (zones/v2/capacity, etc.).
 const DEFAULT_CAPACITY = 20;
 
-let map;
+let map = null;
 let markers = {};
 let zonesData = {};     // static zone info from Firestore
 let sessionsList = [];  // live sessions from Firestore
@@ -26,24 +26,38 @@ let selectedZoneId = null;
 let myUid = null;
 let mySession = null;   // this user's active (non-expired) session, if any
 
+// ---- Splash screen (registered FIRST so a later error can't leave it stuck) ----
+function hideSplash() {
+  const splash = document.getElementById("splash");
+  if (!splash) return;
+  setTimeout(() => {
+    splash.classList.add("fade-out");
+    setTimeout(() => splash.remove(), 400);
+  }, 1200);
+}
+if (document.readyState === "complete") {
+  hideSplash();
+} else {
+  window.addEventListener("load", hideSplash);
+}
+
 // ---- Leaflet map init (OpenStreetMap tiles, free, no API key) ----
 function initMap() {
+  if (typeof L === "undefined") {
+    console.error("Leaflet (L) is not loaded. Check the <script> tag for leaflet.js in index.html.");
+    return;
+  }
   map = L.map("map").setView([4.3870, 100.9660], 16);
   L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
     attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
     maxZoom: 19,
   }).addTo(map);
 }
-initMap();
-
-// ---- Splash screen ----
-window.addEventListener("load", () => {
-  setTimeout(() => {
-    const splash = document.getElementById("splash");
-    splash.classList.add("fade-out");
-    setTimeout(() => splash.remove(), 400);
-  }, 1200);
-});
+try {
+  initMap();
+} catch (err) {
+  console.error("Map failed to start:", err);
+}
 
 // ---- Status derivation from occupied/capacity ----
 function statusFor(occupied, capacity) {
@@ -81,23 +95,28 @@ function escapeHtml(s) {
 
 // ---- Firestore: zone info (static) ----
 function listenToZones() {
-  onSnapshot(collection(db, "zones"), (snapshot) => {
-    if (snapshot.empty) {
-      console.warn("No zones found in Firestore — run seed.js first.");
-      return;
+  onSnapshot(
+    collection(db, "zones"),
+    (snapshot) => {
+      zonesData = {};
+      if (snapshot.empty) {
+        console.warn("No zones found in Firestore — run seed.js first.");
+      }
+      snapshot.forEach((docSnap) => {
+        const d = docSnap.data();
+        zonesData[docSnap.id] = {
+          name: d.zone_name,
+          lat: d.latitude,
+          lng: d.longitude,
+          capacity: d.capacity ?? DEFAULT_CAPACITY,
+        };
+      });
+      recompute();
+    },
+    (err) => {
+      console.error("Zones listener failed (check Firestore rules / connection):", err);
     }
-    zonesData = {};
-    snapshot.forEach((docSnap) => {
-      const d = docSnap.data();
-      zonesData[docSnap.id] = {
-        name: d.zone_name,
-        lat: d.latitude,
-        lng: d.longitude,
-        capacity: d.capacity ?? DEFAULT_CAPACITY,
-      };
-    });
-    recompute();
-  });
+  );
 }
 
 // ---- Combine zones + sessions into what the UI shows ----
@@ -107,7 +126,13 @@ function recompute() {
 
   // If my own session has expired, quietly clear it so I can report again.
   const raw = sessionsList.find((s) => s.uid === myUid);
-  if (raw && !mine && Date.now() - raw.startedAt.getTime() > SESSION_TTL_MS) {
+  if (
+    raw &&
+    !mine &&
+    raw.startedAt &&
+    typeof raw.startedAt.getTime === "function" &&
+    Date.now() - raw.startedAt.getTime() > SESSION_TTL_MS
+  ) {
     removeExpiredSession().catch(() => {});
   }
 
@@ -134,11 +159,23 @@ function recompute() {
 
 // ---- Render markers on the map ----
 function renderMarkers() {
+  if (!map) return;
+
+  // Remove markers for zones that no longer exist
+  Object.keys(markers).forEach((id) => {
+    if (!currentZones[id]) {
+      markers[id].remove();
+      delete markers[id];
+    }
+  });
+
   Object.values(currentZones).forEach((zone) => {
+    if (typeof zone.lat !== "number" || typeof zone.lng !== "number") return;
     const color = markerColor(zone.status);
     const dash = zone.stale ? "4 3" : null; // dashed border = possibly outdated
     if (markers[zone.id]) {
       markers[zone.id].setStyle({ fillColor: color, dashArray: dash });
+      markers[zone.id].setLatLng([zone.lat, zone.lng]);
     } else {
       const marker = L.circleMarker([zone.lat, zone.lng], {
         radius: 10,
@@ -148,7 +185,7 @@ function renderMarkers() {
         fillOpacity: 1,
         dashArray: dash,
       }).addTo(map);
-      marker.bindTooltip(zone.name);
+      marker.bindTooltip(escapeHtml(zone.name));
       marker.on("click", () => openModal(zone.id));
       markers[zone.id] = marker;
     }
@@ -158,10 +195,11 @@ function renderMarkers() {
 // ---- Render the zone list ----
 function renderZoneList() {
   const container = document.getElementById("zoneList");
+  if (!container) return;
   container.querySelectorAll(".zone-card").forEach((el) => el.remove());
 
   Object.values(currentZones)
-    .sort((a, b) => a.name.localeCompare(b.name))
+    .sort((a, b) => String(a.name).localeCompare(String(b.name)))
     .forEach((zone) => {
       const card = document.createElement("div");
       card.className = "zone-card";
