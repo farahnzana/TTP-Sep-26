@@ -1,20 +1,195 @@
+
 rules_version = '2';
+
 service cloud.firestore {
- match /databases/{database}/documents {
-  function signedIn() { return request.auth != null; }
-  function admin() { return signedIn() && exists(/databases/$(database)/documents/admins/$(request.auth.uid)) && get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.enabled == true; }
-  match /admins/{uid} { allow read: if admin() && request.auth.uid == uid; allow write: if false; }
-  match /zones/{id} {
-   allow read: if true;
-   allow create, delete: if admin();
-   allow update: if admin() && request.resource.data.capacity is int && request.resource.data.capacity >= 0 && request.resource.data.verified is bool;
+  match /databases/{database}/documents {
+
+    // Replace with your administrator Firebase UID.
+   
+
+function isAdmin() {
+  return request.auth != null
+      && exists(
+        /databases/$(database)/documents/admins/$(request.auth.uid)
+    )
+      && get(
+        /databases/$(database)/documents/admins/$(request.auth.uid)
+    ).data.enabled == true;
+    }
+
+    // Allow users to check their own admin status.
+    match /admins/{uid} {
+      allow read: if request.auth != null
+      && request.auth.uid == uid;
+
+      allow write: if false;
+    }
+
+
+    // Parking locations
+    match /zones/{zoneId} {
+      allow read: if true;
+      allow create, update, delete: if isAdmin();
+    }
+
+    // Parking sessions
+   match /sessions/{uid} {
+      allow read: if request.auth != null;
+
+      allow create: if request.auth != null
+      && request.auth.uid == uid
+      && request.resource.data.keys().hasAll([
+      'uid',
+      'zoneId',
+      'startedAt',
+      'duration',
+      'expectedDeparture',
+      'confirmedAt',
+      'remindedAt'
+    ])
+      && request.resource.data.keys().hasOnly([
+      'uid',
+      'zoneId',
+      'startedAt',
+      'duration',
+      'expectedDeparture',
+      'confirmedAt',
+      'remindedAt'
+    ])
+      && request.resource.data.uid == uid
+      && request.resource.data.zoneId is string
+      && exists(
+      /databases/$(database)/documents/zones/$(request.resource.data.zoneId)
+    )
+      && request.resource.data.startedAt == request.time
+      && request.resource.data.confirmedAt == request.time
+      && request.resource.data.duration in [
+      'short', 'day', 'overnight', 'long'
+    ]
+      && (
+      request.resource.data.expectedDeparture == null
+      || (
+        request.resource.data.expectedDeparture is timestamp
+        && request.resource.data.expectedDeparture > request.time
+      )
+    )
+      && request.resource.data.remindedAt == null;
+
+    allow update: if request.auth != null
+    && request.auth.uid == uid
+    && request.resource.data.diff(resource.data)
+      .affectedKeys().hasOnly([
+        'duration',
+        'expectedDeparture',
+        'confirmedAt',
+        'remindedAt'
+      ])
+    && request.resource.data.uid == resource.data.uid
+    && request.resource.data.zoneId == resource.data.zoneId
+    && request.resource.data.startedAt == resource.data.startedAt
+    && request.resource.data.duration in [
+      'short', 'day', 'overnight', 'long'
+    ]
+    && (
+      request.resource.data.expectedDeparture == null
+      || (
+        request.resource.data.expectedDeparture is timestamp
+        && request.resource.data.expectedDeparture > request.time
+      )
+    )
+    && request.resource.data.confirmedAt is timestamp
+    && request.resource.data.confirmedAt >= resource.data.confirmedAt
+    && (
+      request.resource.data.remindedAt == null
+      || request.resource.data.remindedAt is timestamp
+    );
+
+  allow delete: if request.auth != null
+    && request.auth.uid == uid;
+}
+
+
+    // SpotIt Plus — 15-minute parking bookings
+    // Prototype: Firebase sign-in required, no paid account activation.
+    match /bookings/{uid} {
+
+      // Needed for live booking counts and the user's booking listener.
+      allow read: if request.auth != null;
+
+      // Create one booking under the signed-in user's UID.
+      allow create: if request.auth != null
+        && request.auth.uid == uid
+        && request.resource.data.keys().hasAll([
+          'uid', 'zoneId', 'createdAt', 'expiresAt'
+        ])
+        && request.resource.data.keys().hasOnly([
+          'uid', 'zoneId', 'createdAt', 'expiresAt'
+        ])
+        && request.resource.data.uid == uid
+        && request.resource.data.zoneId is string
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.expiresAt is timestamp
+        && request.resource.data.expiresAt > request.time
+        && request.resource.data.expiresAt <=
+          request.time + duration.value(16, 'm')
+        && exists(
+          /databases/$(database)/documents/zones/$(request.resource.data.zoneId)
+        )
+        && get(
+          /databases/$(database)/documents/zones/$(request.resource.data.zoneId)
+        ).data.verified == true
+        && !exists(
+          /databases/$(database)/documents/sessions/$(uid)
+        );
+
+      // An expired booking can be replaced with a new one.
+      allow update: if request.auth != null
+        && request.auth.uid == uid
+        && resource.data.expiresAt <= request.time
+        && request.resource.data.keys().hasOnly([
+          'uid', 'zoneId', 'createdAt', 'expiresAt'
+        ])
+        && request.resource.data.uid == uid
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.expiresAt is timestamp
+        && request.resource.data.expiresAt > request.time
+        && request.resource.data.expiresAt <=
+          request.time + duration.value(16, 'm')
+        && exists(
+          /databases/$(database)/documents/zones/$(request.resource.data.zoneId)
+        )
+        && get(
+          /databases/$(database)/documents/zones/$(request.resource.data.zoneId)
+        ).data.verified == true
+        && !exists(
+          /databases/$(database)/documents/sessions/$(uid)
+        );
+
+      // Users can cancel or clean up their own bookings.
+      allow delete: if request.auth != null
+        && request.auth.uid == uid;
+    }
+
+
+    // User profiles
+    match /users/{uid} {
+      allow read, write: if request.auth != null
+        && request.auth.uid == uid;
+    }
+
+    // Parking event history
+    match /events/{eventId} {
+      allow read: if isAdmin();
+
+      allow create: if request.auth != null
+        && request.resource.data.keys().hasOnly([
+          'uid', 'zoneId', 'type', 'createdAt'
+        ])
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.type in ['parked', 'left']
+        && request.resource.data.createdAt == request.time;
+
+      allow update, delete: if false;
+    }
   }
-  match /sessions/{uid} {
-   allow read: if signedIn();
-   allow create: if signedIn() && request.auth.uid == uid && request.resource.data.uid == uid && request.resource.data.zoneId is string && request.resource.data.startedAt == request.time && exists(/databases/$(database)/documents/zones/$(request.resource.data.zoneId)) && get(/databases/$(database)/documents/zones/$(request.resource.data.zoneId)).data.verified == true;
-   allow update: if false;
-   allow delete: if signedIn() && request.auth.uid == uid;
-  }
-  match /events/{id} { allow create: if signedIn() && request.resource.data.uid == request.auth.uid && request.resource.data.createdAt == request.time; allow read: if admin(); allow update, delete: if false; }
- }
 }

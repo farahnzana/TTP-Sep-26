@@ -1,7 +1,6 @@
-import { db } from "./firebase-config.js";
-import { getAuth, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-import { doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-const auth=getAuth();const $=id=>document.getElementById(id);
+import { app } from "./firebase-config.js";
+import { getAuth, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+const auth=getAuth(app);const $=id=>document.getElementById(id);
 const panels={free:$("freePanel"),subscribed:$("subscriberForm"),admin:$("adminPanel")};
 document.querySelectorAll(".choice").forEach(button=>button.addEventListener("click",()=>{
  document.querySelectorAll(".choice").forEach(b=>b.classList.toggle("active",b===button));
@@ -10,20 +9,20 @@ document.querySelectorAll(".choice").forEach(button=>button.addEventListener("cl
 }));
 $("continueFree").addEventListener("click",async()=>{
  $("message").textContent="";$("continueFree").disabled=true;
- try {if(auth.currentUser && !auth.currentUser.isAnonymous) await signOut(auth);window.location.assign("parking.html");}
+ try {sessionStorage.removeItem("spotitPlusPreview");if(auth.currentUser && !auth.currentUser.isAnonymous) await signOut(auth);window.location.assign("parking.html");}
  catch(error){$("message").textContent="Could not switch accounts: "+error.message;$("continueFree").disabled=false;}
 });
-$("subscriberForm").addEventListener("submit",async event=>{
- event.preventDefault();const button=$("subscriberSubmit");button.disabled=true;$("message").textContent="Checking subscription…";
+$("subscriberDemo").addEventListener("click", async () => {
+ const button = $("subscriberDemo");
+ button.disabled = true;
+ $("message").textContent = "";
  try {
-  const credential=await signInWithEmailAndPassword(auth,$("subscriberEmail").value.trim(),$("subscriberPassword").value);
-  const snapshot=await getDoc(doc(db,"users",credential.user.uid));
-  const data=snapshot.exists()?snapshot.data():{};
-  // Subscription is controlled by trusted Firebase data, never a client-side role selection.
-  if(data.subscriptionStatus!=="active"){
-    await signOut(auth);$("message").textContent="No active subscription found for this account. Choose Free user or contact your project administrator.";return;
-  }
-  window.location.assign("parking.html");
- }catch(error){$("message").textContent="Sign-in failed: "+error.message;}
- finally{button.disabled=false;}
+   // Select the prototype Plus experience; Firebase Auth still owns all bookings.
+   if (auth.currentUser && !auth.currentUser.isAnonymous) await signOut(auth);
+   sessionStorage.setItem("spotitPlusPreview", "1");
+   window.location.assign("parking.html");
+ } catch (error) {
+   $("message").textContent = "Could not open preview: " + error.message;
+   button.disabled = false;
+ }
 });

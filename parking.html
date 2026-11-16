@@ -24,6 +24,14 @@
     <!-- Map fills the whole phone, always mounted behind everything else -->
     <div id="map" class="map-bg"></div>
 
+    <!-- Map-only control: centers on browser-reported position. -->
+    <button type="button" id="mapMyLocation" class="map-my-location" aria-label="Center map on my location" title="My location">
+      <svg aria-hidden="true" viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2.4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/>
+      </svg>
+    </button>
+    <div id="mapLocationMessage" class="map-location-message" role="status" aria-live="polite" hidden></div>
+
     <!-- Floating top bar: logo + current page pill -->
     <header class="topbar-float">
       <span class="brand">
@@ -34,18 +42,75 @@
       <a href="index.html" class="entry-link" title="Switch account" id="switchRoleLink">Switch role</a>
     </header>
 
-
-
     <div id="connectionStatus" class="connection-error" hidden></div>
+
     <!-- List panel — frosted glass overlay on top of the map -->
     <section class="overlay-panel" id="tabList" hidden>
-      <div class="zone-list" id="zoneList"><!-- zone cards injected by script.js --></div>
+      <div id="membershipView" class="membership-view" hidden>
+        <div id="membershipFree" class="membership-screen" hidden>
+          <div class="membership-eyebrow">SPOTIT MEMBERSHIP</div>
+          <div class="membership-hero"><div class="membership-crown">✦</div><div><h2>Parking, made easier.</h2><p>Upgrade to SpotIt Plus and spend less time looking for a space.</p></div></div>
+          <div class="membership-card"><div class="membership-plan-heading"><span>SpotIt Plus</span><span class="membership-plan-tag">MONTHLY</span></div><div class="membership-price">RM 4.90 <small>/ month</small></div><p class="membership-muted">Proposed subscription price</p><div class="membership-divider"></div>
+            <h3>Included with Plus</h3><ul class="membership-benefits"><li>15-minute parking reservations</li><li>Find the nearest available parking</li><li>Navigate to your chosen location</li><li>No advertisements</li></ul>
+            <div class="membership-payment"><strong>Payment method</strong><div class="membership-payment-options"><span>💳 Card</span><span>🏦 Online banking</span><span>📱 E-wallet</span></div><p>This is a prototype checkout. No payment details are collected and no money is charged.</p></div>
+            <button type="button" class="membership-cta" id="membershipSubscribe">Continue with SpotIt Plus</button><p class="membership-note">You can switch back to Free at any time in this prototype.</p>
+          </div>
+        </div>
+        <div id="membershipPlus" class="membership-screen" hidden>
+          <div class="membership-eyebrow">YOUR MEMBERSHIP</div>
+          <div class="membership-gold-card"><div class="membership-gold-top"><span>✦ SPOTIT PLUS</span><span class="membership-active">ACTIVE</span></div><h2>You're on Plus.</h2><p>Enjoy a smoother, ad-free parking experience.</p></div>
+          <div class="membership-card"><h3>Your benefits</h3><ul class="membership-benefits"><li>Book a space for 15 minutes</li><li>Find nearby parking and navigate</li><li>Ad-free location details</li></ul><div class="membership-divider"></div><div class="membership-detail"><span>Plan</span><strong>Plus · prototype</strong></div><div class="membership-detail"><span>Proposed price</span><strong>RM 4.90 / month</strong></div><p class="membership-muted">No billing is active. This membership is selected for the prototype.</p><button type="button" class="membership-secondary" id="membershipManage">Switch to Free plan</button></div>
+        </div>
+        <button type="button" class="membership-browse" id="membershipBrowse">☰ Browse parking locations <span>→</span></button>
+      </div>
+      <div id="zoneListSection" class="zone-list-section"><div class="zone-list" id="zoneList"><!-- zone cards injected by script.js --></div><button type="button" id="membershipBack" class="membership-browse" hidden>← Back to membership</button></div>
     </section>
 
-    <!-- About panel — frosted glass overlay on top of the map -->
-    <section class="overlay-panel" id="tabAbout" hidden>
-      <p class="about-text">SpotIt is a UTP campus parking reporting pilot covering Villages and Academic Blocks. Green, amber and red indicate reported availability; grey means capacity or location is not verified. Reports are crowd-sourced, not sensor-detected, and expire after four hours. Never rely on this pilot for guaranteed parking availability.</p>
-      <p class="about-text"><a href="index.html">Switch role / account</a> · <a href="admin.html">Administrator dashboard</a> · <a href="research.html">Detection feasibility &amp; project scope</a></p>
+    <!-- Nearby parking panel: verified subscriber or presentation demo -->
+    <section class="overlay-panel plus-panel" id="tabNearby" hidden>
+      <div class="plus-head"><strong>⭐ Find Nearby Parking</strong><span>SpotIt Plus</span></div>
+      <p class="plus-note">Find verified UTP parking areas near your current location. Distances are straight-line estimates, not driving distances.</p>
+      <button type="button" class="plus-locate" id="plusLocate">📍 Find nearest parking &amp; navigate</button>
+      <p class="plus-feedback" id="plusFeedback" role="status" aria-live="polite">Location is requested only when you press the button.</p>
+      <div id="plusResults" class="plus-results"></div>
+    </section>
+
+    <!-- About: mobile-first overview for Free and Plus; legacy admin view retained. -->
+    <section class="overlay-panel spotit-about-panel" id="tabAbout" hidden>
+      <div id="userAboutView" class="user-about">
+        <div class="user-about-hero">
+          <div class="user-about-logo" aria-hidden="true">📍</div>
+          <div><span class="user-about-kicker">WELCOME TO SPOTIT</span>
+            <h2>Smarter campus parking</h2>
+            <p>Find parking around Universiti Teknologi PETRONAS with more confidence.</p>
+          </div>
+        </div>
+        <div class="user-about-card">
+          <h3>What is SpotIt?</h3>
+          <p>SpotIt helps UTP drivers explore parking locations, check reported availability and share updates when they park or leave. Availability is estimated from user reports and active bookings, not physical sensors.</p>
+        </div>
+        <h3 class="user-about-section-title">How SpotIt helps you</h3>
+        <div class="user-about-features">
+          <div class="user-about-feature"><span class="user-about-feature-icon">🗺️</span><div><strong>Parking availability</strong><p>Browse UTP parking zones and their reported available spaces.</p></div></div>
+          <div class="user-about-feature"><span class="user-about-feature-icon">📍</span><div><strong>GPS check-in</strong><p>Report parking when your device is within the zone's configured GPS radius.</p></div></div>
+          <div class="user-about-feature"><span class="user-about-feature-icon">🔔</span><div><strong>Parking reminders</strong><p>Confirm whether your car is still parked, or check out when you leave.</p></div></div>
+          <div class="user-about-feature"><span class="user-about-feature-icon">✦</span><div><strong>SpotIt Plus</strong><p>Book a reported space for 15 minutes, find nearby parking and open navigation without ads.</p></div></div>
+        </div>
+        <h3 class="user-about-section-title">Understanding parking status</h3>
+        <div class="user-about-status-grid">
+          <div class="user-about-status available"><span class="user-about-status-dot"></span><strong>Available</strong><small>Spaces reported open</small></div>
+          <div class="user-about-status limited"><span class="user-about-status-dot"></span><strong>Limited</strong><small>Few spaces remaining</small></div>
+          <div class="user-about-status full"><span class="user-about-status-dot"></span><strong>Full</strong><small>No reported spaces</small></div>
+          <div class="user-about-status unknown"><span class="user-about-status-dot"></span><strong>Unverified</strong><small>Location or capacity pending</small></div>
+        </div>
+        <div class="user-about-notice"><span aria-hidden="true">ⓘ</span><p>SpotIt is a crowd-sourced UTP pilot. Reports may be outdated or inaccurate; low-confidence labels flag information needing confirmation. A booking is a reported hold, not a guaranteed physical bay.</p></div>
+        <button type="button" class="user-about-action" id="aboutMembershipAction">Explore SpotIt Plus <span aria-hidden="true">→</span></button>
+        <a class="user-about-switch" href="index.html">Switch account type</a>
+      </div>
+      <div id="adminAboutLegacy" hidden>
+        <p class="about-text">SpotIt is a UTP campus parking reporting pilot covering Villages and Academic Blocks. Green, amber and red indicate reported availability; grey means capacity or location is not verified. Reports are crowd-sourced, not sensor-detected. New sessions stay recorded until check-out; overdue confirmations are marked low confidence. Never rely on this pilot for guaranteed parking availability.</p>
+        <p class="about-text"><a href="index.html">Switch role / account</a> · <a href="admin.html">Administrator dashboard</a> · <a href="research.html">Detection feasibility &amp; project scope</a></p>
+      </div>
     </section>
 
     <!-- Bottom dashboard: on the Map tab this is one combined card
@@ -61,8 +126,9 @@
 
       <nav class="bottom-nav-float">
         <button class="nav-btn" data-tab="tabList" data-label="List">
-          <span class="nav-icon">☰</span>
+          <span class="nav-icon" id="listNavIcon">☰</span>
         </button>
+        <button class="nav-btn" data-tab="tabNearby" data-label="Nearby" id="plusNavButton" hidden title="SpotIt Plus: nearby parking"><span class="nav-icon">📍</span></button>
         <button class="nav-btn active" data-tab="tabMap" data-label="Map">
          <span class="nav-icon">
   <svg viewBox="0 0 512 512" width="18" height="18" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -84,8 +150,7 @@
   <!-- Zone detail modal -->
   <div class="modal-overlay" id="modalOverlay">
     <div class="modal">
-      <button class="modal-close" id="modalClose">&times;</button>
-      <h2 id="modalZoneName">Village 2</h2>
+      <header class="parking-modal-header"><div><h2 id="modalZoneName">Village 2</h2><span class="parking-modal-subtitle">UTP Parking Location</span></div><button class="modal-close" id="modalClose" type="button" aria-label="Close parking details">&times;</button></header>
 
       <!-- Status card: icon changes with status (check = available/limited, X = full) -->
       <div class="status-card status-available" id="statusCard">
@@ -95,10 +160,83 @@
         <p id="modalUpdated" class="updated-text">Updated just now</p>
       </div>
 
+      <!-- Presentation-only reminder preview. No GPS simulation or Firebase writes. -->
+      <section class="reminder-demo-controls" id="reminderDemoControls" hidden>
+        <button type="button" id="testDepartureReminder" class="btn btn-outline">🎬 Test Departure Reminder</button>
+        <small>Presentation preview · no GPS needed · does not change Firebase sessions or occupancy</small>
+      </section>
+      <section class="parking-reminder" id="demoReminderPanel" hidden>
+        <strong>🎬 Demo: Is your car still parked here?</strong>
+        <p>Imagine SpotIt detected your phone outside this zone, or your expected departure is due. Your car may still be parked.</p>
+        <div class="parking-reminder-actions">
+          <button type="button" id="demoStillParked" class="btn btn-primary">Yes, still parked</button>
+          <button type="button" id="demoLeft" class="btn btn-outline">No, I left</button>
+        </div>
+        <p id="demoReminderFeedback" role="status"></p>
+        <section id="demoDetailsPanel" class="parking-duration-panel" hidden>
+          <label for="demoDuration">How long will your car remain parked?</label>
+          <select id="demoDuration">
+            <option value="short">Short stay (under 3 hours)</option>
+            <option value="day" selected>Day parking (3–12 hours)</option>
+            <option value="overnight">Overnight (1–3 days)</option>
+            <option value="long">Long-term / semester break</option>
+          </select>
+          <label for="demoDeparture">Expected departure (optional)</label>
+          <input type="datetime-local" id="demoDeparture" />
+          <button type="button" id="demoSaveDetails" class="btn btn-primary">Confirm parking details (demo)</button>
+        </section>
+        <button type="button" id="demoCloseReminder" class="btn btn-outline">Close demo</button>
+      </section>
+      <section id="parkingReminder" class="parking-reminder" hidden>
+        <strong>Is your car still parked here?</strong>
+        <p id="parkingReminderText"></p>
+        <div class="parking-reminder-actions">
+          <button type="button" id="confirmStillParked" class="btn btn-primary">Yes, still parked</button>
+          <button type="button" id="confirmLeft" class="btn btn-outline">No, I left</button>
+          <button type="button" id="checkDepartureGps" class="btn btn-outline">Check my GPS</button>
+        </div>
+        <p id="departureGpsResult" role="status"></p>
+      </section>
+      <section id="parkingDurationPanel" class="parking-duration-panel" hidden>
+        <label for="parkingDuration">How long will your car remain parked?</label>
+        <select id="parkingDuration">
+          <option value="short">Short stay (under 3 hours)</option>
+          <option value="day" selected>Day parking (3–12 hours)</option>
+          <option value="overnight">Overnight (1–3 days)</option>
+          <option value="long">Long-term / semester break</option>
+        </select>
+        <label for="expectedDeparture">Expected departure (optional)</label>
+        <input type="datetime-local" id="expectedDeparture" />
+        <p>Your car remains recorded as parked until you confirm departure.</p>
+        <button type="button" id="saveParkingDetails" class="btn btn-primary">Confirm parking details</button>
+        <p id="parkingDetailsMessage" role="status"></p>
+      </section>
       <div class="modal-buttons">
         <button id="btnParked" class="btn btn-primary">I parked here</button>
-        <button id="btnLeft" class="btn btn-outline">I just left</button>
       </div>
+      <section class="premium-actions spotit-premium-card" aria-label="SpotIt Plus features">
+        <div class="spotit-premium-heading"><strong>✦ SpotIt Plus</strong><span id="premiumStateBadge">Premium features</span></div>
+        <p id="premiumDescription" class="spotit-premium-description">Book parking and find your nearest available zone.</p>
+        <div class="spotit-premium-buttons">
+          <button id="btnBookParking" type="button" class="btn plus-gold" disabled>Book parking</button>
+          <button id="btnNearestParking" type="button" class="btn plus-gold" disabled>Find nearest</button>
+        </div>
+        <div id="bookingPanel" class="booking-panel" hidden>
+          <strong id="bookingHeading">Parking booking</strong>
+          <p id="bookingMessage" role="status" aria-live="polite"></p>
+          <div id="bookingCountdown" class="booking-countdown" aria-live="off">15:00</div>
+          <button id="cancelBooking" type="button" class="btn btn-outline">Cancel booking</button>
+        </div>
+        <small id="plusFeatureHint"></small>
+        <button id="popupPlusBenefits" type="button" class="spotit-benefits-button">View Plus benefits →</button>
+      </section>
+      <div class="parking-exit-action"><div class="parking-exit-copy"><strong>Parking session</strong><small>Check out when your vehicle leaves</small></div><button id="btnLeft" class="btn btn-outline">I've left</button></div>
+      <section id="gpsStatusPanel" class="gps-status-panel" role="status" aria-live="polite" hidden>
+        <div class="gps-status-heading"><span id="gpsStatusIcon">📍</span><strong id="gpsStatusTitle">Location check</strong></div>
+        <div class="gps-status-metrics"><span>Distance <strong id="gpsDistance">—</strong></span><span>Accuracy <strong id="gpsAccuracy">—</strong></span><span>Radius <strong id="gpsRadius">—</strong></span></div>
+        <p id="gpsStatusMessage"></p>
+      </section>
+      <aside id="freeAd" class="spotit-location-ad" aria-label="Sponsored promotion"><span class="ad-tag">Sponsored</span><strong>☕ Campus Café Special</strong><p>Take a break after parking! Discover offers around UTP.</p><small>Sample promotion · SpotIt Free</small></aside>
       <p class="hint">Parking reports are estimates, not guaranteed occupancy.</p>
     </div>
   </div>
