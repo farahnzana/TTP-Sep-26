@@ -32,3 +32,83 @@ main{width:100%;max-width:460px;margin:0 auto;padding:12px 12px 22px}
 .zone-summary span{font-size:11px}
 @media(max-width:380px){.fields{grid-template-columns:1fr}.admin-tab{font-size:11px}header{padding:16px 14px}main{padding:10px}}
 @media(min-width:461px){body{border-left:1px solid #d0e1ee;border-right:1px solid #d0e1ee}}
+
+/* Update 11: interactive geofence preview for expanded admin zone cards */
+.radius-preview{margin:14px 0 16px}
+.radius-preview-heading{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:8px;font-size:13px;color:#18334b}
+.radius-preview-value{font-weight:700;color:#168c5b;white-space:nowrap}
+.radius-preview-map{height:245px;width:100%;border:1px solid #cbdceb;border-radius:12px;overflow:hidden;background:#e8f2ec;font-size:12px;color:#64748b}
+.radius-preview .note{margin:8px 0 0;line-height:1.45}
+.radius-preview-map .leaflet-container{font-family:system-ui,sans-serif}
+
+/* Update 13: add-zone controls */
+.add-zone-toggle{width:100%;margin:8px 0 10px;font-weight:700;background:#175d89}
+.add-zone-panel{background:white;border-radius:16px;padding:16px;margin:8px 0 16px;box-shadow:0 4px 20px #174c7512}
+.add-zone-panel h3{margin:0 0 8px;font-size:17px}
+.add-zone-panel .radius-preview-map{margin-top:8px;height:275px}
+.new-zone-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
+.secondary-button{background:#e6eff7;color:#174c75;border:1px solid #cadceb}
+
+/* Update 23: presentation controls (admin-only) */
+.presentation-controls{background:#fff;border:1px solid #d6e3ef;border-radius:15px;padding:15px;margin:12px 0;box-shadow:0 3px 15px #174c7512}
+.presentation-controls h3{font-size:16px;margin:0 0 6px}
+.presentation-controls .note{margin:6px 0 10px;line-height:1.45}
+.presentation-switch{display:flex;gap:9px;align-items:center;font-size:13px;margin:12px 0}
+.presentation-switch input{width:auto;margin:0}
+.presentation-row{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.presentation-row select{display:block;width:100%;padding:9px;border:1px solid #cbd5e1;border-radius:8px;margin-top:6px;min-width:0}
+.presentation-controls button{margin:5px 4px 5px 0;font-size:12px}
+.presentation-controls .presentation-secondary{background:#e7edf5;color:#174c75}
+
+/* Update 26: dedicated, touch-friendly admin sections; no embedded map */
+.admin-tabs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin:14px 0}
+.admin-tab{min-height:48px;padding:12px 8px;font-size:13px}
+.admin-map-view{background:transparent;box-shadow:none;overflow:visible}
+.admin-launch,.admin-about{background:#fff;border:1px solid #d7e4ef;border-radius:18px;padding:20px 16px;box-shadow:0 4px 20px #174c7510}
+.admin-launch{text-align:center}.admin-launch h2{font-size:19px;margin:12px 0 6px}.admin-launch-icon{display:inline-flex;align-items:center;justify-content:center;background:#e9f3fd;width:62px;height:62px;border-radius:18px;font-size:29px}
+.admin-action-link{display:flex;align-items:center;justify-content:center;gap:8px;min-height:48px;background:#175d89;color:#fff;text-decoration:none;border-radius:12px;padding:12px 14px;font-weight:700;margin-top:17px;text-align:center}
+.admin-action-secondary{background:#eaf2fa;color:#175d89}
+.admin-about h2{font-size:20px;margin:0 0 8px}
+.admin-about details{border:1px solid #dbe7f0;border-radius:12px;margin:10px 0;background:#fbfdff;overflow:hidden}
+.admin-about summary{cursor:pointer;padding:14px;font-size:14px;font-weight:700;min-height:48px}
+.admin-about details p{padding:0 14px 14px;margin:0;font-size:13px;line-height:1.65;color:#425d72}
+.presentation-controls{margin:0;padding:16px}.presentation-row{grid-template-columns:1fr 1fr}
+.presentation-controls button{min-height:44px;margin:5px 4px 5px 0}
+@media(max-width:360px){.presentation-row{grid-template-columns:1fr}.admin-tabs{gap:6px}.admin-tab{font-size:12px}}
+
+/* Update 29 — admin login visual polish, isolated from signed-in dashboard */
+body:has(#loginPanel:not([hidden])){background:linear-gradient(180deg,#e7f2fc 0%,#f6faff 75%)}
+body:has(#loginPanel:not([hidden]))>header{background:transparent;color:#264d70;padding:25px 24px 10px}
+body:has(#loginPanel:not([hidden]))>header>a{font-size:12px;color:#457eaa;text-decoration:none;font-weight:650}
+body:has(#loginPanel:not([hidden]))>header>h1{font-size:18px;color:#24496b;margin:15px 0 4px}
+body:has(#loginPanel:not([hidden]))>header>p{font-size:12px;color:#7389a0;line-height:1.5;max-width:330px}
+body:has(#loginPanel:not([hidden]))>main{padding:6px 16px 30px}
+.admin-login-panel{border:1px solid #e1ebf5;border-radius:24px!important;background:#fff;padding:25px 21px 19px!important;margin:12px 0!important;box-shadow:0 15px 42px #204c7017!important}
+.admin-login-brand{display:flex;justify-content:center;margin:0 0 15px}
+.admin-login-shield{width:57px;height:57px;display:grid;place-items:center;border-radius:18px;background:#e6f2fd;color:#21638f;font-size:32px;font-weight:700}
+.admin-login-heading{text-align:center;margin-bottom:25px}
+.admin-login-eyebrow{font-size:10px;letter-spacing:.13em;font-weight:800;color:#79a6cd}
+.admin-login-heading h2{font-size:25px;letter-spacing:-.025em;color:#1b4363;margin:8px 0 7px;line-height:1.25}
+.admin-login-heading p{font-size:13px;color:#6e8298;line-height:1.55;margin:0 auto;max-width:285px}
+.admin-login-form>label{display:block;margin:15px 0 7px;color:#2a4861;font-size:12px;font-weight:750}
+.admin-input-wrap{display:flex;align-items:center;position:relative;border:1px solid #cedfed;background:#fbfdff;border-radius:12px;min-height:49px;transition:border-color .15s,box-shadow .15s}
+.admin-input-wrap:focus-within{border-color:#69a6d7;box-shadow:0 0 0 3px #7fb4de30}
+.admin-field-icon{flex:0 0 40px;text-align:center;color:#7e9ab1;font-size:18px}
+.admin-input-wrap input{margin:0;min-width:0;flex:1;width:100%;border:0;background:transparent;padding:12px 11px 12px 0;border-radius:12px;font-size:14px;color:#18334b;outline:none}
+.admin-input-wrap input:focus{outline:none}
+.admin-input-wrap input::placeholder{color:#9daebd}
+.admin-password-toggle{flex:0 0 auto;margin:0 8px 0 0;background:transparent;color:#326c98;font-size:12px;font-weight:700;border-radius:7px;padding:8px 6px;min-height:36px}
+.admin-password-toggle:hover{background:#eaf3fb}
+.admin-login-submit{width:100%;min-height:49px;margin-top:23px;border-radius:12px;font-size:14px;font-weight:750;background:#175d89;display:flex;align-items:center;justify-content:center;gap:12px}
+.admin-login-submit:hover{background:#104c75}
+.admin-login-submit:disabled{opacity:.65;cursor:wait}
+.admin-login-message{font-size:12px;line-height:1.5;overflow-wrap:anywhere;white-space:normal!important;color:#a53b39;margin:12px 0 0}
+.admin-login-message:empty{display:none}
+.admin-login-message:not(:empty){padding:11px 12px;background:#fff1f0;border:1px solid #f6d7d4;border-radius:10px}
+.admin-login-message.is-loading{color:#315e83;background:#edf5fd;border-color:#d7e7f5}
+.admin-login-footer{border-top:1px solid #e8eff6;padding:16px 0 0;margin-top:21px;text-align:center;color:#8b9aab;font-size:11px;line-height:1.5}
+.admin-login-lock{margin-right:4px}
+.admin-login-back{display:block;margin:16px 0 0;text-align:center;color:#447ca7;font-size:12px;text-decoration:none;font-weight:650}
+.admin-login-back:hover{text-decoration:underline}
+.admin-login-submit:focus-visible,.admin-password-toggle:focus-visible,.admin-login-back:focus-visible{outline:3px solid #6ca6d6;outline-offset:2px}
+@media(max-width:360px){.admin-login-panel{padding:21px 15px!important}.admin-login-heading h2{font-size:23px}}
