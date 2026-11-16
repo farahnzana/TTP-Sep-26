@@ -1,0 +1,20 @@
+rules_version = '2';
+service cloud.firestore {
+ match /databases/{database}/documents {
+  function signedIn() { return request.auth != null; }
+  function admin() { return signedIn() && exists(/databases/$(database)/documents/admins/$(request.auth.uid)) && get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.enabled == true; }
+  match /admins/{uid} { allow read: if admin() && request.auth.uid == uid; allow write: if false; }
+  match /zones/{id} {
+   allow read: if true;
+   allow create, delete: if admin();
+   allow update: if admin() && request.resource.data.capacity is int && request.resource.data.capacity >= 0 && request.resource.data.verified is bool;
+  }
+  match /sessions/{uid} {
+   allow read: if signedIn();
+   allow create: if signedIn() && request.auth.uid == uid && request.resource.data.uid == uid && request.resource.data.zoneId is string && request.resource.data.startedAt == request.time && exists(/databases/$(database)/documents/zones/$(request.resource.data.zoneId)) && get(/databases/$(database)/documents/zones/$(request.resource.data.zoneId)).data.verified == true;
+   allow update: if false;
+   allow delete: if signedIn() && request.auth.uid == uid;
+  }
+  match /events/{id} { allow create: if signedIn() && request.resource.data.uid == request.auth.uid && request.resource.data.createdAt == request.time; allow read: if admin(); allow update, delete: if false; }
+ }
+}
