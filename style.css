@@ -363,3 +363,9 @@ body {
     box-shadow: none;
   }
 }
+.dot.unknown { background: #94a3b8; }
+.badge.unknown { background: #e2e8f0; color: #475569; }
+.status-card.status-unknown { background: #e2e8f0; color: #334155; }
+.connection-error { position: absolute; top: 85px; left: 10px; right: 10px; z-index: 1000; padding: 10px; border-radius: 10px; background: #fee2e2; color: #991b1b; font-size: 12px; }
+
+.entry-link{font-size:11px;text-decoration:none;color:#194b70;background:#ffffffd9;padding:7px 9px;border-radius:18px;font-weight:700;white-space:nowrap}

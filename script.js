@@ -11,13 +11,13 @@ import {
   removeExpiredSession,
   summarise,
   SESSION_TTL_MS,
-} from "./sessions.js";
+} from "./session.js";
 
 // Used only if a zone document has no "capacity" field.
 // Set the real capacity per zone in Firestore (zones/v2/capacity, etc.).
-const DEFAULT_CAPACITY = 20;
+const DEFAULT_CAPACITY = 0; // Unverified capacities are shown as pending, never as live availability.
 
-let map = null;
+let map;
 let markers = {};
 let zonesData = {};     // static zone info from Firestore
 let sessionsList = [];  // live sessions from Firestore
@@ -26,47 +26,35 @@ let selectedZoneId = null;
 let myUid = null;
 let mySession = null;   // this user's active (non-expired) session, if any
 
-// ---- Splash screen (registered FIRST so a later error can't leave it stuck) ----
-function hideSplash() {
-  const splash = document.getElementById("splash");
-  if (!splash) return;
-  setTimeout(() => {
-    splash.classList.add("fade-out");
-    setTimeout(() => splash.remove(), 400);
-  }, 1200);
-}
-if (document.readyState === "complete") {
-  hideSplash();
-} else {
-  window.addEventListener("load", hideSplash);
-}
-
 // ---- Leaflet map init (OpenStreetMap tiles, free, no API key) ----
 function initMap() {
-  if (typeof L === "undefined") {
-    console.error("Leaflet (L) is not loaded. Check the <script> tag for leaflet.js in index.html.");
-    return;
-  }
   map = L.map("map").setView([4.3870, 100.9660], 16);
   L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
     attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
     maxZoom: 19,
   }).addTo(map);
 }
-try {
-  initMap();
-} catch (err) {
-  console.error("Map failed to start:", err);
-}
+initMap();
+
+// ---- Splash screen ----
+window.addEventListener("load", () => {
+  setTimeout(() => {
+    const splash = document.getElementById("splash");
+    splash.classList.add("fade-out");
+    setTimeout(() => splash.remove(), 400);
+  }, 1200);
+});
 
 // ---- Status derivation from occupied/capacity ----
 function statusFor(occupied, capacity) {
+  if (!Number.isFinite(capacity) || capacity <= 0) return "unknown";
   if (occupied >= capacity) return "full";
   if (occupied >= capacity * 0.7) return "limited";
   return "available";
 }
 
 function markerColor(status) {
+  if (status === "unknown") return "#94a3b8";
   if (status === "full") return "#e74c3c";
   if (status === "limited") return "#f39c12";
   return "#2ecc71";
@@ -94,29 +82,30 @@ function escapeHtml(s) {
 }
 
 // ---- Firestore: zone info (static) ----
+function showConnectionError(error) {
+  const el = document.getElementById("connectionStatus");
+  if (el) { el.hidden = false; el.textContent = `Connection error: ${error.message}`; }
+}
+
 function listenToZones() {
-  onSnapshot(
-    collection(db, "zones"),
-    (snapshot) => {
-      zonesData = {};
-      if (snapshot.empty) {
-        console.warn("No zones found in Firestore — run seed.js first.");
-      }
-      snapshot.forEach((docSnap) => {
-        const d = docSnap.data();
-        zonesData[docSnap.id] = {
-          name: d.zone_name,
-          lat: d.latitude,
-          lng: d.longitude,
-          capacity: d.capacity ?? DEFAULT_CAPACITY,
-        };
-      });
-      recompute();
-    },
-    (err) => {
-      console.error("Zones listener failed (check Firestore rules / connection):", err);
+  onSnapshot(collection(db, "zones"), (snapshot) => {
+    if (snapshot.empty) {
+      console.warn("No zones found in Firestore — run seed.js first.");
+      return;
     }
-  );
+    zonesData = {};
+    snapshot.forEach((docSnap) => {
+      const d = docSnap.data();
+      zonesData[docSnap.id] = {
+        name: d.zone_name,
+        lat: d.latitude,
+        lng: d.longitude,
+        capacity: Number.isFinite(d.capacity) ? d.capacity : DEFAULT_CAPACITY,
+        verified: d.verified === true,
+      };
+    });
+    recompute();
+  }, (error) => { console.error("Zone subscription failed", error); showConnectionError(error); });
 }
 
 // ---- Combine zones + sessions into what the UI shows ----
@@ -126,13 +115,7 @@ function recompute() {
 
   // If my own session has expired, quietly clear it so I can report again.
   const raw = sessionsList.find((s) => s.uid === myUid);
-  if (
-    raw &&
-    !mine &&
-    raw.startedAt &&
-    typeof raw.startedAt.getTime === "function" &&
-    Date.now() - raw.startedAt.getTime() > SESSION_TTL_MS
-  ) {
+  if (raw && !mine && Date.now() - raw.startedAt.getTime() > SESSION_TTL_MS) {
     removeExpiredSession().catch(() => {});
   }
 
@@ -146,7 +129,8 @@ function recompute() {
       lng: z.lng,
       capacity: z.capacity,
       occupied: info.occupied,
-      status: statusFor(info.occupied, z.capacity),
+      status: z.verified ? statusFor(info.occupied, z.capacity) : "unknown",
+      verified: z.verified,
       lastUpdated: info.newest,
       stale: info.stale,
     };
@@ -159,23 +143,12 @@ function recompute() {
 
 // ---- Render markers on the map ----
 function renderMarkers() {
-  if (!map) return;
-
-  // Remove markers for zones that no longer exist
-  Object.keys(markers).forEach((id) => {
-    if (!currentZones[id]) {
-      markers[id].remove();
-      delete markers[id];
-    }
-  });
-
   Object.values(currentZones).forEach((zone) => {
-    if (typeof zone.lat !== "number" || typeof zone.lng !== "number") return;
+    if (!Number.isFinite(zone.lat) || !Number.isFinite(zone.lng)) return;
     const color = markerColor(zone.status);
     const dash = zone.stale ? "4 3" : null; // dashed border = possibly outdated
     if (markers[zone.id]) {
       markers[zone.id].setStyle({ fillColor: color, dashArray: dash });
-      markers[zone.id].setLatLng([zone.lat, zone.lng]);
     } else {
       const marker = L.circleMarker([zone.lat, zone.lng], {
         radius: 10,
@@ -185,28 +158,28 @@ function renderMarkers() {
         fillOpacity: 1,
         dashArray: dash,
       }).addTo(map);
-      marker.bindTooltip(escapeHtml(zone.name));
+      marker.bindTooltip(zone.name);
       marker.on("click", () => openModal(zone.id));
       markers[zone.id] = marker;
     }
   });
+  Object.keys(markers).forEach((id) => { if (!currentZones[id] || !Number.isFinite(currentZones[id].lat) || !Number.isFinite(currentZones[id].lng)) { map.removeLayer(markers[id]); delete markers[id]; } });
 }
 
 // ---- Render the zone list ----
 function renderZoneList() {
   const container = document.getElementById("zoneList");
-  if (!container) return;
   container.querySelectorAll(".zone-card").forEach((el) => el.remove());
 
   Object.values(currentZones)
-    .sort((a, b) => String(a.name).localeCompare(String(b.name)))
+    .sort((a, b) => a.name.localeCompare(b.name))
     .forEach((zone) => {
       const card = document.createElement("div");
       card.className = "zone-card";
       card.innerHTML = `
         <div>
           <div class="zone-name">${escapeHtml(zone.name)}</div>
-          <div class="zone-sub">${escapeHtml(freshnessText(zone).replace("Updated ", ""))}</div>
+          <div class="zone-sub">${zone.verified ? escapeHtml(`${Math.max(0, zone.capacity-zone.occupied)} of ${zone.capacity} reported available · ${freshnessText(zone)}`) : "Capacity / location awaiting verification"}</div>
         </div>
         <span class="badge ${zone.status}">${zone.status[0].toUpperCase() + zone.status.slice(1)}</span>
       `;
@@ -237,8 +210,8 @@ function renderModal(zoneId) {
   document.getElementById("modalStatus").textContent =
     zone.status[0].toUpperCase() + zone.status.slice(1);
   document.getElementById("modalCapacity").textContent =
-    `${zone.occupied} / ${zone.capacity} spots taken (reported)`;
-  document.getElementById("modalUpdated").textContent = freshnessText(zone);
+    zone.verified ? `${zone.occupied} / ${zone.capacity} spots taken (reported)` : "Parking capacity not yet verified";
+  document.getElementById("modalUpdated").textContent = zone.verified ? freshnessText(zone) : "Awaiting administrator verification";
 
   document.getElementById("statusCard").className = `status-card status-${zone.status}`;
   document.getElementById("statusIcon").innerHTML =
@@ -262,16 +235,16 @@ function renderModal(zoneId) {
     const otherName = currentZones[mySession.zoneId]?.name || "another village";
     hintEl.textContent = `You're already marked as parked at ${otherName}. Tap "I just left" there first.`;
   } else {
-    btnParked.disabled = zone.occupied >= zone.capacity;
+    btnParked.disabled = !zone.verified || zone.capacity <= 0 || zone.occupied >= zone.capacity;
     btnLeft.disabled = true;
-    hintEl.textContent = "Reports expire automatically after 4 hours.";
+    hintEl.textContent = zone.verified ? "Reports expire automatically after 4 hours. Counts are user-reported, not sensor verified." : "Administrator must verify capacity and coordinates before reports are enabled.";
   }
 }
 
 // ---- Report actions ----
 async function reportParked() {
   const zone = currentZones[selectedZoneId];
-  if (!zone || mySession || zone.occupied >= zone.capacity) return;
+  if (!zone || !zone.verified || mySession || zone.occupied >= zone.capacity) return;
   document.getElementById("btnParked").disabled = true;
   try {
     await startSession(zone.id);
