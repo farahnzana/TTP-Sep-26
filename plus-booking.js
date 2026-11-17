@@ -5,7 +5,9 @@ import { db } from "./firebase-config.js";
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 import { collection, doc, onSnapshot, runTransaction, deleteDoc, serverTimestamp, Timestamp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 export const BOOKING_MS = 15 * 60 * 1000;
-const selectedPlus = sessionStorage.getItem("spotitPlusPreview") === "1";
+const adminParkingView = new URLSearchParams(window.location.search).get("adminView") === "1";
+// Admin parking view has the same booking and nearby features as SpotIt Plus.
+const selectedPlus = adminParkingView || sessionStorage.getItem("spotitPlusPreview") === "1";
 let activePlus = selectedPlus;
 let signedInUid = null;
 let myBooking = null;

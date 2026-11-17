@@ -414,9 +414,9 @@ function renderPlusActions(zone) {
   nearest.disabled = !plus;
   nearest.textContent = plus ? "↗ Navigate" : "🔒 Navigate";
   book.textContent = plus ? (mine ? "✓ Booked" : "✦ Book · 15 min") : "🔒 Book";
-  document.getElementById("premiumStateBadge").textContent = plus ? "Unlocked" : "Locked";
-  document.getElementById("premiumDescription").textContent = plus ? "Reserve a reported space or find nearby parking." : "Unlock booking and nearest-parking navigation.";
-  document.getElementById("popupPlusBenefits").hidden = plus;
+  document.getElementById("premiumStateBadge").textContent = isEmbeddedAdmin ? "Enabled" : (plus ? "Unlocked" : "Locked");
+  document.getElementById("premiumDescription").textContent = isEmbeddedAdmin ? "Book for 15 minutes or find the nearest available parking." : (plus ? "Reserve a reported space or find nearby parking." : "Unlock booking and nearest-parking navigation.");
+  document.getElementById("popupPlusBenefits").hidden = plus || new URLSearchParams(location.search).get("adminView") === "1";
   book.disabled = !plus || !bookingEnabled() || !!active || !!mySession || !zone.verified || zone.capacity - zone.occupied - (zone.reserved||0) <= 0;
   hint.textContent = !plus ? "" :
     !bookingEnabled() ? "Connecting to Firebase…" :
@@ -441,7 +441,7 @@ function openNearestPanel() {
 function updatePlus() {
   document.body.classList.toggle("spotit-plus",plusEnabled());
   renderMembershipTab();
-  document.getElementById("freeAd").hidden=plusEnabled();
+  document.getElementById("freeAd").hidden=plusEnabled() || new URLSearchParams(location.search).get("adminView") === "1";
   document.dispatchEvent(new Event("spotit-plus-change"));
   recompute();
 }
@@ -726,6 +726,14 @@ document.getElementById("btnLeft").addEventListener("click", reportLeft);
 
 // ---- Role-aware mobile membership and parking list ----
 const isEmbeddedAdmin = new URLSearchParams(location.search).get("adminView") === "1";
+if(isEmbeddedAdmin){
+  document.body.classList.add("spotit-admin-parking");
+  // Keep premium actions visible for admins, including booking and navigation.
+  const premiumHeading=document.querySelector(".spotit-premium-heading strong");
+  if(premiumHeading)premiumHeading.textContent="✦ Admin parking tools";
+  const link=document.getElementById("switchRoleLink");
+  if(link){link.textContent="Admin";link.href="admin.html";}
+}
 let browsingZones = false;
 function renderMembershipTab() {
   const isPlus = plusEnabled();

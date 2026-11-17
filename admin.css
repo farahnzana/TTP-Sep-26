@@ -112,3 +112,9 @@ body:has(#loginPanel:not([hidden]))>main{padding:6px 16px 30px}
 .admin-login-back:hover{text-decoration:underline}
 .admin-login-submit:focus-visible,.admin-password-toggle:focus-visible,.admin-login-back:focus-visible{outline:3px solid #6ca6d6;outline-offset:2px}
 @media(max-width:360px){.admin-login-panel{padding:21px 15px!important}.admin-login-heading h2{font-size:23px}}
+
+/* Embedded live parking map in the administrator Parking tab. */
+.admin-map-heading{display:flex;flex-direction:column;gap:4px;padding:10px 2px 12px;color:#153e60}
+.admin-map-heading strong{font-size:16px}.admin-map-heading span{font-size:12px;color:#55728b}
+#adminParkingFrame{display:block;width:100%;height:min(76vh,790px);min-height:540px;border:1px solid #d5e4ef;border-radius:20px;background:#e9f3fc}
+@media(max-width:650px){#adminParkingFrame{height:72vh;min-height:480px;border-radius:16px}}

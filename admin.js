@@ -12,6 +12,7 @@ function showAdminView(view){
  adminTabs.forEach(button=>{const selected=button.dataset.view===view;button.classList.toggle("active",selected);button.setAttribute("aria-pressed",String(selected));});
 }
 adminTabs.forEach(button=>button.addEventListener("click",()=>showAdminView(button.dataset.view)));
+function loadAdminMap(){const frame=$("adminParkingFrame");if(frame && frame.getAttribute("src")==="about:blank")frame.src=frame.dataset.src;}
 const $=id=>document.getElementById(id);
 // Presentation-only controls for the login form. Firebase authorization is unchanged.
 const adminPasswordToggle = $("toggleAdminPassword");
@@ -82,12 +83,12 @@ onAuthStateChanged(auth,async user=>{
  if(unsub){unsub();unsub=null;}
  disposeRadiusPreviews();
  closeAddZoneForm();
- $("adminPanel").hidden=true;$("loginPanel").hidden=false;
+ $("adminPanel").hidden=true;$("loginPanel").hidden=false;const frame=$("adminParkingFrame");if(frame)frame.src="about:blank";
  if(!user)return;
  try{
   const permission=await getDoc(doc(db,"admins",user.uid));
   if(!permission.exists() || permission.data().enabled!==true){console.warn("Admin access not approved for UID:",user.uid);$("loginMessage").textContent="This account does not have administrator access. Please contact the project administrator.";return;}
-  $("loginPanel").hidden=true;$("adminPanel").hidden=false;$("loginMessage").textContent="";showAdminView("map");
+  $("loginPanel").hidden=true;$("adminPanel").hidden=false;$("loginMessage").textContent="";showAdminView("map");loadAdminMap();
   unsub=onSnapshot(collection(db,"zones"),snapshot=>{
    populatePresentationZones(snapshot);
    const container=$("zones");disposeRadiusPreviews();container.replaceChildren();
